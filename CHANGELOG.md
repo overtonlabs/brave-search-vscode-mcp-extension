@@ -5,6 +5,12 @@ All notable changes to the "Brave Search MCP for VS Code" extension will be docu
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-02-09
+
+### 🐛 Fixed
+
+- **MCP Server Discovery**: Added `mcpServerDefinitionProviders` contribution point to package.json to improve discoverability and align with VS Code's MCP extension categorization
+
 ## [1.0.0] - 2026-02-04
 
 ### ✨ Added
@@ -75,4 +81,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extension Categories**: AI, Other
 - **License**: BSD-3-Clause
 
+[1.0.1]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/releases/tag/v1.0.0
