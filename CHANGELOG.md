@@ -5,6 +5,19 @@ All notable changes to the "Brave Search MCP for VS Code" extension will be docu
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-04-06
+
+### 🐛 Fixed
+
+#### **Extension Not Visible as a Chat Agent Tool**
+
+- **`activationEvents`**: Changed from an empty array `[]` to `["onStartupFinished"]` in `package.json` — the extension was never activating, so the MCP server was never registered and the search tools were invisible to the chat agent
+- **MCP server always published**: Removed the guard in `provideMcpServerDefinitions()` that returned an empty array when no API key was configured; the server definition is now always returned when the extension is enabled, making the tools immediately visible to the agent
+- **Credentials deferred to `resolveMcpServerDefinition()`**: API key collection moved out of `provideMcpServerDefinitions()` (where user interaction is not allowed) into `resolveMcpServerDefinition()`, which is the correct MCP lifecycle hook for credential injection and UI prompts
+- **`McpServerDefinitionProvider` fully implemented**: Added `onDidChangeMcpServerDefinitions` event emitter and `dispose()` implementation required by the interface; added `refresh()` to notify VS Code when the server definition changes
+- **Live config updates**: Configuration change listener and the `configureApiKey` command now call `provider.refresh()` so the MCP server is updated immediately when the API key is saved or settings change
+- **API key validation hardened**: Extracted shared `validateApiKey()` function used by both the input box and `resolveMcpServerDefinition()`; added check that the key starts with `BSA` (format validation was missing from the command palette flow)
+
 ## [1.1.0] - 2026-04-06
 
 ### ✨ Added

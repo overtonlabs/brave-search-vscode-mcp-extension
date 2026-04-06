@@ -2,7 +2,7 @@
   "name": "brave-search-mcp",
   "displayName": "Brave Search MCP",
   "description": "MCP server integration for Brave Search API - enables AI copilot to perform internet searches",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "Steve Overton",
     "url": "https://github.com/Steve0verton"
@@ -24,7 +24,9 @@
     "copilot",
     "model-context-protocol"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "mcpServerDefinitionProviders": [

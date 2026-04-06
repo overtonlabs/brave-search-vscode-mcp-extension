@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
 
+const EXTENSION_CONFIGURATION_SECTION = "braveSearchMcp";
+const MCP_PROVIDER_ID = "brave-search-mcp";
+const MCP_SERVER_LABEL = "Brave Search";
+const MCP_SERVER_VERSION = "1.1.1";
+const BRAVE_SEARCH_SERVER_PACKAGE = "@brave/brave-search-mcp-server";
+
 /**
  * Activates the Brave Search MCP extension
  * Registers an MCP server definition provider that launches the official Brave Search MCP server
@@ -7,12 +13,15 @@ import * as vscode from "vscode";
 export function activate(context: vscode.ExtensionContext) {
   console.log("Brave Search MCP extension is now active");
 
+  const provider = new BraveSearchMcpProvider();
+
   // Register the MCP server definition provider
-  const provider = vscode.lm.registerMcpServerDefinitionProvider(
-    "brave-search-mcp",
-    new BraveSearchMcpProvider(),
+  const providerRegistration = vscode.lm.registerMcpServerDefinitionProvider(
+    MCP_PROVIDER_ID,
+    provider,
   );
 
+  context.subscriptions.push(providerRegistration);
   context.subscriptions.push(provider);
 
   // Add command to configure API key
@@ -24,21 +33,19 @@ export function activate(context: vscode.ExtensionContext) {
         password: true,
         placeHolder: "BSA...",
         ignoreFocusOut: true,
-        validateInput: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "API key cannot be empty";
-          }
-          return null;
-        },
+        validateInput: validateApiKey,
       });
 
       if (apiKey) {
-        const config = vscode.workspace.getConfiguration("braveSearchMcp");
+        const config = vscode.workspace.getConfiguration(
+          EXTENSION_CONFIGURATION_SECTION,
+        );
         await config.update(
           "apiKey",
           apiKey,
           vscode.ConfigurationTarget.Global,
         );
+        provider.refresh();
         vscode.window.showInformationMessage(
           "Brave Search API key saved successfully!",
         );
@@ -48,19 +55,39 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(configureCommand);
 
-  // Check if API key is configured on activation
-  checkApiKeyConfiguration();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration(EXTENSION_CONFIGURATION_SECTION)) {
+        provider.refresh();
+      }
+    }),
+  );
 }
 
 /**
  * MCP Server Definition Provider for Brave Search
  */
-class BraveSearchMcpProvider implements vscode.McpServerDefinitionProvider {
+class BraveSearchMcpProvider
+  implements vscode.McpServerDefinitionProvider, vscode.Disposable
+{
+  private readonly changeEmitter = new vscode.EventEmitter<void>();
+
+  readonly onDidChangeMcpServerDefinitions = this.changeEmitter.event;
+
+  dispose() {
+    this.changeEmitter.dispose();
+  }
+
+  refresh() {
+    this.changeEmitter.fire();
+  }
+
   provideMcpServerDefinitions(
     token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.McpServerDefinition[]> {
-    const config = vscode.workspace.getConfiguration("braveSearchMcp");
-    const apiKey = config.get<string>("apiKey");
+    const config = vscode.workspace.getConfiguration(
+      EXTENSION_CONFIGURATION_SECTION,
+    );
     const enabled = config.get<boolean>("enabled", true);
 
     // If disabled, return empty array
@@ -69,61 +96,81 @@ class BraveSearchMcpProvider implements vscode.McpServerDefinitionProvider {
       return [];
     }
 
-    // If no API key is configured, show a warning
-    if (!apiKey || apiKey.trim().length === 0) {
-      console.warn("Brave Search API key not configured");
-      vscode.window
-        .showWarningMessage(
-          "Brave Search MCP: API key not configured",
-          "Configure Now",
-        )
-        .then((selection) => {
-          if (selection === "Configure Now") {
-            vscode.commands.executeCommand("brave-search-mcp.configureApiKey");
-          }
-        });
-      return [];
-    }
-
-    // Return the MCP server definition
-    // This uses the official @brave/brave-search-mcp-server package
+    // Always publish the server definition when enabled.
+    // Credential collection is deferred to resolveMcpServerDefinition,
+    // which is the MCP lifecycle point that allows user interaction.
     return [
       new vscode.McpStdioServerDefinition(
-        "Brave Search",
+        MCP_SERVER_LABEL,
         "npx",
-        ["-y", "@brave/brave-search-mcp-server"],
-        {
-          BRAVE_API_KEY: apiKey,
-        },
+        ["-y", BRAVE_SEARCH_SERVER_PACKAGE],
+        {},
+        MCP_SERVER_VERSION,
       ),
     ];
   }
+
+  async resolveMcpServerDefinition(
+    server: vscode.McpServerDefinition,
+    token: vscode.CancellationToken,
+  ): Promise<vscode.McpServerDefinition | undefined> {
+    if (!(server instanceof vscode.McpStdioServerDefinition)) {
+      return server;
+    }
+
+    if (token.isCancellationRequested) {
+      return undefined;
+    }
+
+    const config = vscode.workspace.getConfiguration(
+      EXTENSION_CONFIGURATION_SECTION,
+    );
+
+    let apiKey = config.get<string>("apiKey")?.trim();
+
+    if (apiKey && validateApiKey(apiKey) !== null) {
+      apiKey = undefined;
+    }
+
+    if (!apiKey) {
+      apiKey = await vscode.window.showInputBox({
+        prompt: "Enter your Brave Search API key",
+        password: true,
+        placeHolder: "BSA...",
+        ignoreFocusOut: true,
+        validateInput: validateApiKey,
+      });
+
+      if (!apiKey) {
+        return undefined;
+      }
+
+      apiKey = apiKey.trim();
+
+      await config.update("apiKey", apiKey, vscode.ConfigurationTarget.Global);
+
+      this.refresh();
+    }
+
+    server.env = {
+      ...(server.env ?? {}),
+      BRAVE_API_KEY: apiKey,
+    };
+
+    return server;
+  }
 }
 
-/**
- * Checks if the API key is configured and shows a notification if not
- */
-function checkApiKeyConfiguration() {
-  const config = vscode.workspace.getConfiguration("braveSearchMcp");
-  const apiKey = config.get<string>("apiKey");
-
-  if (!apiKey || apiKey.trim().length === 0) {
-    vscode.window
-      .showInformationMessage(
-        "Brave Search MCP extension requires an API key to function.",
-        "Configure Now",
-        "Get API Key",
-      )
-      .then((selection) => {
-        if (selection === "Configure Now") {
-          vscode.commands.executeCommand("brave-search-mcp.configureApiKey");
-        } else if (selection === "Get API Key") {
-          vscode.env.openExternal(
-            vscode.Uri.parse("https://api.search.brave.com/"),
-          );
-        }
-      });
+function validateApiKey(value: string): string | null {
+  if (!value || value.trim().length === 0) {
+    return "API key cannot be empty";
   }
+
+  if (!value.trim().startsWith("BSA")) {
+    return 'Brave Search API keys should start with "BSA"';
+  }
+
+  return null;
 }
 
 /**
