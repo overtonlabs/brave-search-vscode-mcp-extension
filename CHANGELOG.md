@@ -5,6 +5,32 @@ All notable changes to the "Brave Search MCP for VS Code" extension will be docu
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-06
+
+### ✨ Added
+
+- **Video and Local Search tools**: Documented `brave_video_search` and `brave_local_search` tools now available via `@brave/brave-search-mcp-server` v2.x
+- **Example prompts**: Added Video Search and Local Search example prompt sections to README
+
+### 🐛 Fixed
+
+- **npm audit**: Updated devDependencies (ajv, brace-expansion, flatted, minimatch, picomatch, qs, underscore, undici) to resolve moderate and high severity vulnerabilities
+- **README clone URL**: Corrected placeholder `yourusername` to `Steve0verton` in the Building from Source section
+- **README API pricing**: Replaced stale Free AI / Base AI / Pro AI plan tiers with current Brave Search pricing
+- **README troubleshooting**: Removed dead reference to deleted Future Enhancements section
+
+### 📝 Documentation
+
+- **README**: Removed Future Enhancements section — all feature requests now tracked as [GitHub Issues](https://github.com/Steve0verton/brave-search-vscode-mcp-extension/issues)
+- **copilot-instructions.md**: Updated Core Features list to all 5 search tools; replaced Future Enhancements with GitHub Issues reference
+
+### 🔧 Technical Details
+
+#### **Developer Tooling**
+
+- **launch.json**: Added VS Code launch configuration so pressing F5 opens a fresh VS Code Extension Development Host window with the extension loaded for live testing and debugging — without affecting your main VS Code environment
+- **tasks.json**: Added default build task that automatically compiles TypeScript before each F5 launch, ensuring the running extension always reflects the latest source code changes
+
 ## [1.0.1] - 2026-02-09
 
 ### 🐛 Fixed
@@ -81,5 +107,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extension Categories**: AI, Other
 - **License**: BSD-3-Clause
 
+[1.1.0]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/releases/tag/v1.0.0

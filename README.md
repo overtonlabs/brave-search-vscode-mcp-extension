@@ -13,6 +13,8 @@ This extension provides AI Copilot with the ability to:
 - 🔍 **Web Search**: Search the web using Brave's independent search index
 - 📰 **News Search**: Find recent news articles and current events
 - 🖼️ **Image Search**: Search for images across the web
+- 🎬 **Video Search**: Search for videos with metadata and thumbnails
+- 📍 **Local Search**: Find local businesses and places with ratings and hours (requires Search plan)
 
 These capabilities are automatically available to GitHub Copilot and other AI assistants in VS Code when running in agent mode.
 
@@ -46,9 +48,11 @@ Search for "Brave Search MCP" in the Extensions view and click Install.
 
 ### API Plans
 
-- **Free AI**: 2,000 queries/month, 1 query/second
-- **Base AI**: $5/1,000 requests, up to 20M queries/month
-- **Pro AI**: $9/1,000 requests, unlimited queries
+- **Search**: $5/1,000 requests — includes $5 in free credits every month (automatically applied)
+- **Answers**: $4/1,000 queries + token costs — AI-generated grounded answers
+- **Enterprise**: Custom terms, capacity, and Zero Data Retention — [contact Brave](https://brave.com/search/api/)
+
+See [Brave Search API Pricing](https://api-dashboard.search.brave.com/documentation/pricing) for full details.
 
 ## Configuration
 
@@ -111,6 +115,20 @@ Try asking Copilot questions like these:
 - "Find screenshots of popular VS Code themes"
 - "Look for icons representing API concepts"
 
+#### 🎬 Video Search Examples
+
+- "Find tutorial videos for getting started with Rust"
+- "Search for conference talks about distributed systems"
+- "Find videos explaining how transformers work in machine learning"
+- "Look for VS Code tips and tricks videos"
+
+#### 📍 Local Search Examples
+
+- "Find coffee shops near downtown Seattle"
+- "Search for co-working spaces in Austin, TX"
+- "Find highly rated Thai restaurants in Chicago"
+- "Look for hardware stores open near me"
+
 **💡 Tips for Best Results:**
 
 - **Use natural language** - No special syntax or commands needed
@@ -151,9 +169,8 @@ This extension uses the [Model Context Protocol (MCP)](https://modelcontextproto
 
 ### Rate limiting errors
 
-- Check your API usage in the [Brave API Dashboard](https://api.search.brave.com/)
-- Consider upgrading to a paid plan if you hit the free tier limits
-- See "Future Enhancements" below for planned rate limiting features
+- Check your API usage in the [Brave API Dashboard](https://api-dashboard.search.brave.com/)
+- The Search plan includes $5 in free monthly credits — usage beyond that is billed at $5/1,000 requests
 
 ## Privacy & Security
 
@@ -166,8 +183,8 @@ This extension uses the [Model Context Protocol (MCP)](https://modelcontextproto
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/brave-search-mcp-extension.git
-cd brave-search-mcp-extension
+git clone https://github.com/Steve0verton/brave-search-vscode-mcp-extension.git
+cd brave-search-vscode-mcp-extension
 
 # Install dependencies
 npm install
@@ -191,53 +208,9 @@ npm run watch
 # Press F5 in VS Code to launch a new window with the extension loaded
 ```
 
-## Future Enhancements
+## Feature Requests & Contributing
 
-The following features are planned for future releases:
-
-### Rate Limiting & Quota Management
-
-- **Request throttling**: Automatically limit requests to respect API rate limits
-- **Quota tracking**: Display current API usage in status bar
-- **Warning notifications**: Alert users when approaching monthly quota
-- **Request queuing**: Queue requests when rate limit is hit
-- **Configurable limits**: Allow users to set custom rate limits below API maximums
-
-### Caching
-
-- **Response caching**: Cache search results to reduce API calls for repeated queries
-- **Configurable TTL**: Allow users to set cache expiration times
-- **Cache statistics**: Show cache hit/miss rates
-- **Manual cache clearing**: Command to clear cached results
-
-### Additional Search Types
-
-- **Video search**: Search for videos across the web
-- **Local search**: Find local businesses and points of interest
-- **Spell check**: Suggest corrections for misspelled queries
-
-### Enhanced Configuration
-
-- **Multiple API keys**: Support for team/organization key rotation
-- **Search preferences**: Configure default search parameters (country, language, etc.)
-- **Result filtering**: Custom filters for search results
-- **Search history**: View and manage recent searches
-
-### Monitoring & Analytics
-
-- **Usage dashboard**: View API usage statistics within VS Code
-- **Error logging**: Detailed logs for troubleshooting
-- **Performance metrics**: Track search response times
-- **Cost estimation**: Calculate estimated costs for paid tiers
-
-### User Experience
-
-- **Search result preview**: View search results in VS Code before AI uses them
-- **Manual search command**: Trigger searches directly from Command Palette
-- **Result annotations**: Highlight and annotate search results
-- **Keyboard shortcuts**: Quick access to search features
-
-## Contributing
+Have an idea or found a bug? [Open an issue on GitHub](https://github.com/Steve0verton/brave-search-vscode-mcp-extension/issues) — all feature requests and enhancement ideas are tracked there.
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 

@@ -21,6 +21,8 @@ You are a full-stack developer working on a VS Code extension that integrates Br
 1. **Web Search** (`brave_web_search`): General web search returning up to 20 results
 2. **News Search** (`brave_news_search`): Recent news articles and current events
 3. **Image Search** (`brave_image_search`): Image search across the web
+4. **Video Search** (`brave_video_search`): Video search with metadata and thumbnails
+5. **Local Search** (`brave_local_search`): Local businesses and places with ratings and hours (full functionality requires Search plan)
 
 These tools are automatically available to AI assistants when:
 
@@ -95,47 +97,6 @@ These tools are automatically available to AI assistants when:
 - Extension enabled/disabled toggle
 - Configuration changes while running
 - Multiple workspaces
-
-### Future Enhancements (Planned)
-
-#### Rate Limiting & Quota Management
-
-- Request throttling to respect API limits
-- Quota tracking and status bar display
-- Warning notifications when approaching limits
-- Request queuing and configurable limits
-
-#### Caching
-
-- Response caching to reduce API calls
-- Configurable TTL and cache statistics
-- Manual cache clearing
-
-#### Additional Search Types
-
-- Video search
-- Local/business search
-- Spell check suggestions
-
-#### Enhanced Configuration
-
-- Multiple API key support (team/organization)
-- Search preferences (country, language)
-- Result filtering
-- Search history
-
-#### Monitoring & Analytics
-
-- Usage dashboard within VS Code
-- Error logging and performance metrics
-- Cost estimation for paid tiers
-
-#### User Experience
-
-- Search result preview in VS Code
-- Manual search command in Command Palette
-- Result annotations
-- Keyboard shortcuts
 
 ### Resources
 
