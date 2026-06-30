@@ -1,0 +1,39 @@
+# Build-check CI — runs on every push to main and every pull request.
+# Fails fast on TypeScript errors, lint errors, or a packaging failure, so a
+# broken build is caught before it can be tagged and published to the Marketplace.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile (TypeScript)
+        run: npm run compile
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Verify the extension packages
+        run: npx @vscode/vsce package --out brave-search-mcp.vsix
+
+      - name: Upload packaged VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: brave-search-mcp.vsix
