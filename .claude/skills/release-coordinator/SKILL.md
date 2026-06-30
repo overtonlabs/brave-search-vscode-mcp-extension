@@ -21,25 +21,49 @@ three-place version bump, clean commits, and the pause before any outward action
 |--------|--------|---------------|
 | "commit this", "let's commit", "ready to commit" | Standard commit workflow | No — pause before outward actions |
 | "commit and push", "push this", "push the release" | Commit then push | Yes — the user explicitly authorized push |
-| "cut a release", "create a release", "time to release" | Full release workflow | No by default — the agent prepares everything and **pauses before push/tag/publish** unless "push" was said |
+| "cut a release", "create a release", "time to release", "full release", "ship it", "draft the release notes" | Full release — **CI-driven**: pushing the `vX.Y.Z` tag triggers Marketplace publish **and** the GitHub Release | No by default — the agent prepares everything and **pauses before push/tag** unless "push" was said. It **explicitly asks** whether to cut a full release (push the tag) |
 | "bump the patch version" | Patch release | No by default — version level is chosen, push still gated |
 | "bump the minor version" | Minor release | No by default — version level is chosen, push still gated |
 | "bump the major version" | Major (breaking) release | No — major needs explicit confirmation; push still gated |
-| "publish to the marketplace" | `vsce publish` | No — publish is always an explicit gate |
+| "publish to the marketplace", "ship the release" | Triggers the CI publish — done by pushing the `vX.Y.Z` tag | No — the tag push is always an explicit gate |
 | feature branches piling up | Branch-checkpoint nudge | No |
 
-> **Posture:** push, tag, and `vsce publish` are **always an explicit gate** — the agent
-> pauses before any outward action even during a "release," unless the user said
-> "push"/"and push." Per CLAUDE.md and global rules, commit/push only when the user asks.
+> **Posture:** pushing the branch and **pushing the `vX.Y.Z` tag** are **always an explicit
+> gate** — the agent pauses before any outward action even during a "release," unless the
+> user said "push"/"and push." The tag push is the irreversible one — it triggers CI to
+> publish to the Marketplace and cut the GitHub Release. Per CLAUDE.md and global rules,
+> commit/push only when the user asks.
+
+> **The "full release" question (CI-driven).** A *full release* in this repo is triggered
+> by **pushing the `vX.Y.Z` tag** — that one push fires the `release.yml` GitHub Actions
+> workflow, which builds once and ships that artifact to **both** the Marketplace
+> (`vsce publish`) **and** a GitHub Release at the
+> [releases page](https://github.com/overtonlabs/brave-search-vscode-mcp-extension/releases).
+> The agent **does not** run `vsce publish` or `gh release create` itself — CI owns both.
+> Its job is to ask the user explicitly whether to cut a full release, get the CHANGELOG and
+> three version sync points right, walk the pre-publish gate, and on the user's go push the
+> tag. Key consequences it must respect:
+> - **Pushing the tag is the irreversible step** — it publishes to 700+ users and creates
+>   the public release. Gate it like the highest-stakes action.
+> - **The CHANGELOG section becomes the release notes verbatim** — CI extracts this version's
+>   section (header stripped, headings promoted one level) for the body. A sloppy entry ships
+>   publicly. The fixed title is `Release vX.Y.Z - Brave Search MCP for VS Code`; the asset is
+>   the CI-built `brave-search-mcp-X.Y.Z.vsix` plus GitHub's auto-attached source archives.
+> - **CI needs the `VSCE_PAT` repo secret** (Azure DevOps PAT, Marketplace > Manage). If it's
+>   missing, CI builds then fails at publish — the agent flags it; the user sets it.
+> - A safe rehearsal exists: the workflow's `workflow_dispatch` dry-run builds + packages
+>   without publishing or releasing.
 
 > **⚠️ This is a public Marketplace extension with 700+ live users on auto-update.** A bad
-> publish can't be cleanly un-published — only superseded by another release. So `vsce publish`
-> is the highest-stakes action: it is gated on the user's explicit go **and** on the agent
-> walking its Pre-publish checklist (compile + lint clean, all three versions synced and
-> strictly greater than the published one, `.vsix` inspected, **user-confirmed F5 smoke test**,
-> rollback noted). The agent also runs a blast-radius scan on every release and a secret-hygiene
-> scan before every commit. The user said "push" authorizes push — it does **not** authorize
-> publish; publish is its own confirmation.
+> publish can't be cleanly un-published — only superseded by another release. Publishing and
+> the GitHub Release are CI-driven (`release.yml`, on the `vX.Y.Z` tag push), so **pushing
+> the tag** is the highest-stakes action: it is gated on the user's explicit go **and** on
+> the agent walking its Pre-publish checklist (compile + lint clean, all three versions
+> synced and strictly greater than the published one, `.vsix` inspected, `VSCE_PAT` secret
+> present, **user-confirmed F5 smoke test**, rollback noted). The agent also runs a
+> blast-radius scan on every release and a secret-hygiene scan before every commit. A plain
+> "push" authorizes the branch push — it does **not** authorize the tag push; that is its own
+> confirmation.
 
 ## Repo-specific context to pass the agent
 
@@ -49,8 +73,9 @@ three-place version bump, clean commits, and the pause before any outward action
 3. `CHANGELOG.md` — a new dated `## [X.Y.Z] - YYYY-MM-DD` section **and** the
    compare-link reference at the bottom of the file.
 
-Releases are git-tagged `vX.Y.Z`. The agent verifies a bump with `npm run compile`
-and (for publishing) `npm run package` → `vsce publish`.
+Releases are git-tagged `vX.Y.Z`. The agent verifies a bump with `npm run compile`;
+**pushing the `vX.Y.Z` tag** then triggers CI (`release.yml`) to package, `vsce publish`
+to the Marketplace, and cut the GitHub Release — the agent does not publish locally.
 
 **SemVer rules (post-1.0, published Marketplace extension):**
 - **PATCH** (`X.Y.Z+1`) — the common case: fixes, dependency bumps, doc-only changes,
@@ -77,17 +102,18 @@ version** (`BRAVE_SEARCH_SERVER_VERSION` in `src/extension.ts`) — upstream doe
 so the pin must never be loosened to a range or `latest`. Bumping the pin ships a new server to
 all 700+ users and counts as a tested, user-facing release.
 
-**Public-release guardrails (700+ users):** the agent treats publish as the highest-stakes
-action and enforces, on every release:
+**Public-release guardrails (700+ users):** the agent treats the **tag push** as the
+highest-stakes action (it triggers CI to publish + release) and enforces, on every release:
 - a **blast-radius scan** of user-facing surfaces (`contributes.configuration` /
   `contributes.commands` / `activationEvents` / `engines.vscode` in `package.json`, the
   upstream pin and identity constants in `src/extension.ts`) — any change is flagged
   **USER IMPACT** and a setting/command rename pushes the bump to **MAJOR**;
-- a **pre-publish checklist** before any `vsce publish` (compile + lint clean; all three
-  versions synced and strictly greater than the published version; `.vsix` built and
-  inspected; **user-confirmed F5 smoke test**; rollback version noted);
+- a **pre-publish checklist** before pushing the `vX.Y.Z` tag (compile + lint clean; all
+  three versions synced and strictly greater than the published version; `.vsix` built and
+  inspected; `VSCE_PAT` secret present; **user-confirmed F5 smoke test**; rollback noted);
 - a **secret-hygiene scan** (no `BSA…` key / `.env` / PAT) before every commit;
-- **post-publish verification** that the Marketplace and git tag reflect the release.
+- **post-release verification** that the CI run is green and both the Marketplace and the
+  GitHub Release reflect the new version.
 
 ## How to dispatch
 
@@ -99,8 +125,9 @@ Agent({
   prompt: "Release/commit workflow triggered by: '<user's exact phrase>'.
   Push implied: <yes only if the user said push/and-push; otherwise no — pause before outward>.
   Version level implied: <patch/minor/major/unspecified>.
-  Repo context: versioning = THREE sync points — package.json version + MCP_SERVER_VERSION in src/extension.ts + CHANGELOG.md (dated section + footer compare link); releases tagged vX.Y.Z. PATCH = common (fixes/deps/docs); MINOR = new user-facing capability; MAJOR = breaking change (rare, needs confirmation). Verify bumps with npm run compile. The version bump is an explicit user gate — always ask unless the level was named. Pause before any push/tag/publish.
-  PUBLIC RELEASE — 700+ live users on auto-update; a bad publish can only be superseded, not undone. Run the blast-radius scan (guardrails §A) on user-facing surfaces and flag USER IMPACT (a setting/command rename ⇒ MAJOR). Before any vsce publish, walk the full pre-publish gate (§B: compile+lint clean, three versions synced and strictly greater than published, .vsix built + inspected, USER-confirmed F5 smoke test, rollback noted). Secret-hygiene scan before every commit (§C). Post-publish verification after publish (§D). 'push' authorizes push, not publish.
+  Repo context: versioning = THREE sync points — package.json version + MCP_SERVER_VERSION in src/extension.ts + CHANGELOG.md (dated section + footer compare link); releases tagged vX.Y.Z. PATCH = common (fixes/deps/docs); MINOR = new user-facing capability; MAJOR = breaking change (rare, needs confirmation). Verify bumps with npm run compile. The version bump is an explicit user gate — always ask unless the level was named. Pause before any branch push or tag push.
+  PUBLIC RELEASE — 700+ live users on auto-update; a bad publish can only be superseded, not undone. Run the blast-radius scan (guardrails §A) on user-facing surfaces and flag USER IMPACT (a setting/command rename ⇒ MAJOR). Before pushing the vX.Y.Z tag (which triggers CI to publish + release), walk the full pre-publish gate (§B: compile+lint clean, three versions synced and strictly greater than published, .vsix built + inspected, VSCE_PAT secret present, USER-confirmed F5 smoke test, rollback noted). Secret-hygiene scan before every commit (§C). Post-release verification after the tag-triggered run (§D). A plain 'push' authorizes the branch push, NOT the tag push that ships the release.
+  FULL RELEASE IS CI-DRIVEN — publishing and the GitHub Release are both owned by .github/workflows/release.yml and both trigger on pushing the vX.Y.Z tag (one CI build ships to Marketplace AND cuts the GitHub Release). Do NOT run vsce publish or gh release create yourself. When the intent is a release (not a plain commit), explicitly ASK whether to cut a full release (push the tag). Pushing the tag is the irreversible outward action — gate it; get the user's explicit go. The CHANGELOG section IS the release notes (CI extracts it, header stripped + headings promoted one level), so get it right before tagging. Confirm the VSCE_PAT repo secret exists (gh secret list) — if missing, CI fails at publish; the user sets it, you only flag it. After the tag push, verify with gh run watch + gh release view + vsce show (§D). A workflow_dispatch dry-run (gh workflow run Release) builds without publishing, for safe rehearsal.
   Proceed with the standard release-coordinator process."
 })
 ```
@@ -110,9 +137,12 @@ Pass the user's exact words so the agent can judge intent accurately.
 ## What NOT to do
 
 - Do not run `git add`, `git commit`, `git push`, or `git tag` yourself.
-- Do not run `vsce publish` or `npm run package` for a release yourself.
-- Do not let a publish skip the agent's pre-publish checklist, and do not treat "push"
-  as authorization to publish — publish is its own explicit gate.
+- Do not run `vsce publish`, `gh release create`, or `npm run package` for a release — and
+  do not assume a release wants a GitHub Release. CI (`release.yml`, triggered by the tag
+  push) owns publishing and the GitHub Release; the agent asks the user and prepares the tag.
+- Do not let the tag push skip the agent's pre-publish checklist, and do not treat a plain
+  "push" as authorization to push the `vX.Y.Z` tag — the tag push (which ships the release)
+  is its own explicit gate.
 - Do not look up the current version and announce it — that is the agent's first step.
 - Do not draft a CHANGELOG entry yourself — the agent reads the diff and does this.
 - Do not decide the version bump or push without the user's explicit call.

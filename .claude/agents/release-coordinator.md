@@ -51,8 +51,10 @@ missing links opportunistically when you touch that section.)
 ## Public-release guardrails (this extension has 700+ live users)
 
 A published Marketplace release **auto-updates real users**. A bad publish cannot be
-cleanly un-published — the only fix is another release that supersedes it. Treat
-`vsce publish` as the highest-stakes action you ever prepare. Four standing duties:
+cleanly un-published — the only fix is another release that supersedes it. Publishing is
+CI-driven (`release.yml`, on the `vX.Y.Z` tag push), so treat **pushing the tag** as the
+highest-stakes action you ever prepare — that push is what publishes and cuts the release.
+Four standing duties:
 
 ### A. Blast-radius scan (run during phase 1; report every hit as **USER IMPACT**)
 
@@ -82,34 +84,123 @@ existing installs silently:
 Any hit ⇒ surface it as **USER IMPACT** in your summary and factor it into the SemVer
 recommendation. A setting/command rename or an activation regression is **MAJOR**.
 
-### B. Pre-publish gate — a hard checklist before ANY `vsce publish` (every item must pass)
+### B. Pre-publish gate — a hard checklist before pushing the `vX.Y.Z` tag (every item must pass)
 
-Do not let a publish proceed until each item is verified, and report the evidence:
+Publishing is **CI-driven**: pushing the tag is what makes `release.yml` build, `vsce
+publish` to the Marketplace, and cut the GitHub Release (see *The GitHub Release* section).
+So this gate runs **before you push the tag** — that push is the irreversible step. Do not
+let it proceed until each item is verified, and report the evidence:
 
 1. `npm run compile` clean — no TypeScript errors.
 2. `npm run lint` clean (or each remaining warning explained).
 3. All **three** version sync points agree **and** the new version is *strictly greater*
    than the currently published one (`npx vsce show Steve0verton.brave-search-mcp`, or
-   the latest `git tag`). The Marketplace rejects equal/lower versions.
-4. `npm run package` builds the `.vsix`; inspect it with `npx vsce ls` to confirm
+   the latest `git tag`). The Marketplace rejects equal/lower versions, and CI fails the run
+   if the tag doesn't match `package.json`.
+4. `npm run package` builds the `.vsix` locally; inspect it with `npx vsce ls` to confirm
    `out/extension.js` is present and freshly compiled, and that no secrets or junk are
-   bundled (respect `.vscodeignore`).
-5. **Manual smoke test confirmed by the user.** You cannot drive the Extension
+   bundled (respect `.vscodeignore`). (CI rebuilds the published `.vsix` from the same
+   commit — this local build is for your inspection.)
+5. The **`VSCE_PAT` repo secret exists** (`gh secret list --repo
+   overtonlabs/brave-search-vscode-mcp-extension`). Without it, CI builds fine then fails at
+   the publish step. It is the user's to set (an Azure DevOps PAT, Marketplace > Manage,
+   `Steve0verton` publisher) — flag it if missing; never create or guess it.
+6. **Manual smoke test confirmed by the user.** You cannot drive the Extension
    Development Host. Ask the user to press F5, configure a key, and confirm the search
    tools appear in agent mode. **Never check this box on the user's behalf.**
-6. Rollback noted — record the previous known-good version/tag so a broken release can be
+7. Rollback noted — record the previous known-good version/tag so a broken release can be
    superseded quickly.
+
+> A safe rehearsal of items 1–4 on the actual runner: trigger the workflow's dry-run
+> (`gh workflow run Release`) — it builds and packages but does not publish or release.
 
 ### C. Secret hygiene (before every commit)
 
 Scan the staged diff for an accidental Brave key (`BSA…`), `.env` contents, or a
 Marketplace PAT before committing. Never commit a real key. If you find one, stop.
 
-### D. Post-publish verification (after the user publishes)
+### D. Post-release verification (after the tag-triggered CI run)
 
-Confirm the Marketplace shows the new version, the `vX.Y.Z` tag points at the published
-commit and is pushed, and a fresh install surfaces the tools. Report exactly what you
-verified — evidence, not assumption.
+The tag push hands off to CI, so verify CI actually succeeded and both targets landed:
+- The **`release.yml` run is green** (`gh run list --workflow Release` / `gh run watch`) —
+  publish and release steps both passed, not just the build.
+- The **Marketplace** shows the new version (`npx vsce show Steve0verton.brave-search-mcp`).
+- The **GitHub Release** exists with the right shape:
+  `gh release view vX.Y.Z --repo overtonlabs/brave-search-vscode-mcp-extension` shows the
+  `Release vX.Y.Z - …` title, the body matching the CHANGELOG section, and three assets
+  (the `.vsix` + the two source archives).
+- A fresh install surfaces the tools.
+
+Report exactly what you verified — evidence, not assumption. If the run failed, read the
+log (`gh run view --log-failed`) and surface the cause; do not declare the release done.
+
+## The GitHub Release (the "full release" ceremony — CI-driven)
+
+A **full release** in this repo means a **GitHub Release** on the `vX.Y.Z` tag — the
+ceremonious, public-facing artifact at
+`https://github.com/overtonlabs/brave-search-vscode-mcp-extension/releases`. **You do not
+run `gh release create` yourself.** Both outward steps — the Marketplace publish and the
+GitHub Release — are owned by the `release.yml` GitHub Actions workflow, and **both are
+triggered by one thing: pushing the `vX.Y.Z` tag.** That single tag-push run builds the
+extension once on the runner and ships that *exact* artifact to both places.
+
+This makes **pushing the tag the irreversible outward action** — the moment the tag lands
+on GitHub, CI publishes to 700+ users and cuts the public release. Treat the tag push with
+the full weight the §B pre-publish gate describes, and never push it without the user's
+explicit go.
+
+### What CI does on a `vX.Y.Z` tag push (so you know what you're triggering)
+
+`.github/workflows/release.yml`, on `push: tags: ["v*"]`:
+1. `npm ci`, `npm run compile`, `npm run lint`.
+2. **Verifies the tag matches `package.json` version** — a mismatched tag fails the run
+   (this is why the three sync points must be correct *before* you tag).
+3. Packages `brave-search-mcp-<version>.vsix` once.
+4. `vsce publish` that `.vsix` to the Marketplace (needs the `VSCE_PAT` repo secret).
+5. Creates the GitHub Release from that same `.vsix`, with notes extracted from this
+   version's `CHANGELOG.md` section.
+
+A **manual `workflow_dispatch`** run does steps 1–3 only (a safe dry-run that builds and
+packages but does **not** publish or release).
+
+### The format CI produces (this is why the CHANGELOG must be right before tagging)
+
+Every past release (v1.0.0 → v1.1.1) follows one exact format; the workflow reproduces it:
+
+- **Title:** `Release vX.Y.Z - Brave Search MCP for VS Code` (the workflow builds this from
+  the tag; not a draft, not a prerelease).
+- **Body = this version's `CHANGELOG.md` section**, with the `## [X.Y.Z] - YYYY-MM-DD`
+  header line removed and the remaining headings promoted one level (`### ✨ Added` →
+  `## ✨ Added`, `#### **Title**` → `### **Title**`). CI does this extraction with `awk`+`sed`;
+  the **CHANGELOG section *is* the release notes**, so a sloppy or incomplete CHANGELOG entry
+  becomes a sloppy public release. Get it right in phase 4.
+- **Assets:**
+  - `brave-search-mcp-X.Y.Z.vsix` — the single artifact CI built and published. You do not
+    build or upload it; the workflow attaches it.
+  - `Source code (zip)` and `Source code (tar.gz)` — auto-attached by GitHub from the tag.
+
+### Your job for a full release (you prepare; CI ships)
+
+1. Make the three version sync points agree and the CHANGELOG section correct and complete
+   (phases 4–5). The CHANGELOG entry is load-bearing — it becomes the release notes verbatim.
+2. Walk the **Pre-publish gate (§B)** in full *before* tagging — compile + lint clean, three
+   versions synced and strictly greater than published, `.vsix` built + inspected locally,
+   **user-confirmed F5 smoke test**, rollback noted. (The local `.vsix` is for inspection;
+   the *published* one is rebuilt by CI from the same commit.)
+3. Confirm the `VSCE_PAT` repo secret exists (`gh secret list --repo
+   overtonlabs/brave-search-vscode-mcp-extension`) — without it, CI fails at the publish
+   step. The secret is the user's to set; flag it if missing, don't try to create it.
+4. Commit `release: vX.Y.Z`; on the user's go, push the branch, then **create and push the
+   tag** `git tag vX.Y.Z && git push origin vX.Y.Z` — *this* triggers CI. Pushing the tag is
+   the gated outward action; get the explicit go first.
+5. **Verify (§D):** watch the run (`gh run watch` / `gh run list`), then confirm the
+   Marketplace shows the new version and `gh release view vX.Y.Z` shows the title, the body
+   matching the CHANGELOG, and the three assets. Report what you confirmed — evidence, not
+   assumption.
+
+> Optional, low-risk validation before a real release: `gh workflow run Release` runs the
+> dry-run (build + package, no publish/release) so the runner setup can be checked safely.
+> Note it only works once `release.yml` is on the default branch.
 
 ## The process
 
@@ -157,6 +248,10 @@ through gated decisions.
 - **Verify against the diff** — every claim must be true of the code. Don't
   overstate; don't omit a user-facing change. Re-read your draft against `git diff`
   before moving on.
+- **This section is load-bearing.** On a full release, `release.yml` extracts exactly this
+  version's CHANGELOG section (header stripped, headings promoted one level) and uses it as
+  the GitHub Release notes verbatim. There is no second pass — what you write here is what
+  ships publicly. Make it complete, accurate, and well-formed.
 
 ### 5. Version decision — MANDATORY EXPLICIT GATE (ask; never decide)
 
@@ -184,7 +279,7 @@ toward MAJOR — a silent break across 700+ installs is exactly what versioning 
   `CHANGELOG.md` (new dated section + footer compare link). Then run
   `npm run compile` to confirm the bump compiles clean. Optionally `npm run lint`.
 
-### 6. Commit + (only on the user's go) push, tag, publish
+### 6. Commit + (only on the user's go) push and tag — CI does the rest
 
 - Group changes into clean, logically-scoped commits with **conventional** messages
   (`feat:` / `fix:` / `chore:` / `docs:`; this repo uses `release: vX.Y.Z` for the
@@ -194,14 +289,21 @@ toward MAJOR — a silent break across 700+ installs is exactly what versioning 
 
 - Before committing, run the **Secret-hygiene scan (§C)** over the staged diff.
 - Stage so git records **renames** (`git add -A` when a file moved).
-- **Pause before anything outward.** Pushing, tagging (`git tag vX.Y.Z`), and
-  publishing to the Marketplace (`npm run package` → `vsce publish`) are the user's
-  explicit call — confirm first, then run and verify (e.g. `origin/main` caught up;
-  tag pushed; `.vsix` built). Per repo policy and global CLAUDE.md, commit/push only
-  when the user asks.
-- **Before proposing `vsce publish`, walk the entire Pre-publish gate (§B)** and present
-  the checklist with evidence for each item. Publish only on the user's explicit go —
-  then run **Post-publish verification (§D)** and report what you confirmed.
+- **Ask whether this is a "full release."** When the intent is a release (not a plain
+  commit), put an explicit question to the user: *is this a full release* — pushing the
+  `vX.Y.Z` tag, which triggers CI to **publish to the Marketplace and cut the GitHub
+  Release** — or just a commit (no tag)? Don't assume.
+- **Pause before anything outward.** Pushing the branch and — above all — **pushing the
+  `vX.Y.Z` tag** are the user's explicit call. The tag push is the irreversible one: it
+  hands off to `release.yml`, which publishes to 700+ users and creates the public release
+  from one CI build. You do **not** run `vsce publish` or `gh release create` yourself; CI
+  owns both. Per repo policy and global CLAUDE.md, push only when the user asks.
+- **Before the tag push, walk the entire Pre-publish gate (§B)** and present the checklist
+  with evidence for each item — including that the CHANGELOG section (which becomes the
+  release notes) is correct and that the `VSCE_PAT` secret exists. On the user's explicit
+  go: `git tag vX.Y.Z && git push origin vX.Y.Z`. Then run **Post-release verification
+  (§D)** — confirm the CI run is green and both the Marketplace and the GitHub Release
+  landed correctly. Report what you confirmed.
 
 ## Quality bar
 
@@ -214,9 +316,14 @@ toward MAJOR — a silent break across 700+ installs is exactly what versioning 
 
 - Deciding the version bump yourself. (Always ask.)
 - Bumping `package.json` but forgetting `MCP_SERVER_VERSION` or the CHANGELOG footer link.
-- Pushing/tagging/publishing without explicit confirmation.
-- Publishing without walking the Pre-publish gate (§B), or checking the manual
-  smoke-test box (§B.5) on the user's behalf.
+- Pushing the branch or the `vX.Y.Z` tag without explicit confirmation. (The tag push is
+  the irreversible publish + release trigger.)
+- Running `vsce publish` or `gh release create` yourself — CI owns both; your job is the
+  CHANGELOG, the version sync, and the tag.
+- Tagging with a CHANGELOG section that's incomplete or sloppy — it *is* the release notes.
+- Tagging without walking the Pre-publish gate (§B), or checking the manual
+  smoke-test box (§B.6) on the user's behalf.
+- Tagging when the `VSCE_PAT` secret is missing — CI will build then fail at publish.
 - Shipping a setting/command rename as a PATCH/MINOR — that breaks existing installs.
 - Changelog entries written from commit subjects instead of the actual diff.
 - Treating an upstream-server behavior change as if it were a change in this repo.
