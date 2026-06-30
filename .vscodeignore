@@ -14,6 +14,11 @@ tsconfig.json
 # Documentation for development
 .github/**
 QUICKSTART.md
+CLAUDE.md
+
+# Claude Code / session tooling — internal, never ship to users
+.claude/**
+.remember/**
 
 # Node modules
 node_modules/**
@@ -23,7 +28,7 @@ node_modules/**
 
 # System files
 .DS_Store
-*.log
+**/*.log
 
 # Test files
 **/*.test.ts

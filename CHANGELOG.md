@@ -5,6 +5,29 @@ All notable changes to the "Brave Search MCP for VS Code" extension will be docu
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-23
+
+### ✨ Added
+
+#### **API key management commands**
+
+- **Clear API Key**: New "Brave Search MCP: Clear API Key" command removes the stored key from secure storage (with a confirmation prompt) — restoring the ability to remove/reset a credential that the move off plaintext settings had taken away
+- **Replace key**: The "Configure API Key" command now detects an existing key and prompts to replace it, making key rotation explicit
+
+### 🔒 Security
+
+#### **API key moved to secure OS keychain storage**
+
+- **SecretStorage**: The Brave Search API key is now stored in VS Code's Secret Storage (backed by the operating system keychain) instead of plaintext in `settings.json`. The key is no longer readable on disk, no longer visible in the Settings UI, and is no longer carried to other machines by Settings Sync
+- **Automatic migration**: Any existing key in the deprecated `braveSearchMcp.apiKey` user (global) setting is moved into secure storage on activation and then cleared — existing users keep working with no action required. Workspace-scoped values of that setting are intentionally not promoted, to prevent a malicious repo from injecting a credential into the OS keychain
+- **Deprecated setting**: `braveSearchMcp.apiKey` is retained (marked deprecated) solely as a migration source; the key is now set via the "Brave Search MCP: Configure API Key" command
+
+#### **Supply-chain hardening: pinned upstream server version**
+
+- **Exact version pin**: The bundled launch of `@brave/brave-search-mcp-server` is now pinned to an exact version instead of resolving `latest` on every user's machine. A new upstream release — including a compromised or breaking one — can no longer reach users automatically; it reaches them only through a tested, deliberate extension release
+- **Why an exact pin (not a range)**: upstream does not follow semver — breaking changes ship as `2.0.x` patch releases — so a `^`/`~` range would offer no real protection. Bumping the pin is now a reviewed release step
+- **Seasoned, not bleeding-edge**: the pin targets a version that is already a few weeks old, so it clears npm "cooldown"/minimum-release-age policies (npm 11+ refuses versions published in the last ~14 days) and has had time to surface regressions — the extension works whether or not a user enforces a release-age delay
+
 ## [1.1.1] - 2026-04-06
 
 ### 🐛 Fixed
@@ -34,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Documentation
 
-- **README**: Removed Future Enhancements section — all feature requests now tracked as [GitHub Issues](https://github.com/Steve0verton/brave-search-vscode-mcp-extension/issues)
+- **README**: Removed Future Enhancements section — all feature requests now tracked as [GitHub Issues](https://github.com/overtonlabs/brave-search-vscode-mcp-extension/issues)
 - **copilot-instructions.md**: Updated Core Features list to all 5 search tools; replaced Future Enhancements with GitHub Issues reference
 
 ### 🔧 Technical Details
@@ -120,6 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extension Categories**: AI, Other
 - **License**: BSD-3-Clause
 
-[1.1.0]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/compare/v1.0.1...v1.1.0
-[1.0.1]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/releases/tag/v1.0.1
-[1.0.0]: https://github.com/Steve0verton/brave-search-vscode-mcp-extension/releases/tag/v1.0.0
+[1.2.0]: https://github.com/overtonlabs/brave-search-vscode-mcp-extension/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/overtonlabs/brave-search-vscode-mcp-extension/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/overtonlabs/brave-search-vscode-mcp-extension/compare/v1.0.1...v1.1.0
+[1.0.1]: https://github.com/overtonlabs/brave-search-vscode-mcp-extension/releases/tag/v1.0.1
+[1.0.0]: https://github.com/overtonlabs/brave-search-vscode-mcp-extension/releases/tag/v1.0.0

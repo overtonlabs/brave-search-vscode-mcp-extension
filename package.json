@@ -2,7 +2,7 @@
   "name": "brave-search-mcp",
   "displayName": "Brave Search MCP",
   "description": "MCP server integration for Brave Search API - enables AI copilot to perform internet searches",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "author": {
     "name": "Steve Overton",
     "url": "https://github.com/Steve0verton"
@@ -40,8 +40,8 @@
       "properties": {
         "braveSearchMcp.apiKey": {
           "type": "string",
-          "description": "Your Brave Search API key. Get one at https://api.search.brave.com/",
-          "markdownDescription": "Your Brave Search API key. Get one at [Brave Search API](https://api.search.brave.com/)",
+          "description": "Deprecated. The API key is now stored securely in your OS keychain. Use the 'Brave Search MCP: Configure API Key' command instead.",
+          "markdownDeprecationMessage": "**Deprecated.** Your API key is now stored securely in your operating system's keychain via VS Code Secret Storage. Any value here is migrated automatically and then cleared. Set or change your key with the **Brave Search MCP: Configure API Key** command.",
           "order": 1
         },
         "braveSearchMcp.enabled": {
@@ -56,6 +56,11 @@
       {
         "command": "brave-search-mcp.configureApiKey",
         "title": "Configure API Key",
+        "category": "Brave Search MCP"
+      },
+      {
+        "command": "brave-search-mcp.clearApiKey",
+        "title": "Clear API Key",
         "category": "Brave Search MCP"
       }
     ]
@@ -79,11 +84,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Steve0verton/brave-search-vscode-mcp-extension"
+    "url": "https://github.com/overtonlabs/brave-search-vscode-mcp-extension"
   },
   "bugs": {
-    "url": "https://github.com/Steve0verton/brave-search-vscode-mcp-extension/issues"
+    "url": "https://github.com/overtonlabs/brave-search-vscode-mcp-extension/issues"
   },
-  "homepage": "https://github.com/Steve0verton/brave-search-vscode-mcp-extension#readme",
+  "homepage": "https://github.com/overtonlabs/brave-search-vscode-mcp-extension#readme",
   "license": "BSD-3-Clause"
 }

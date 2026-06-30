@@ -2,7 +2,7 @@
 
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![VS Code Version](https://img.shields.io/badge/VS%20Code-%5E1.95.0-blue)](https://code.visualstudio.com/)
-[![GitHub Issues](https://img.shields.io/github/issues/Steve0verton/brave-search-vscode-mcp-extension)](https://github.com/Steve0verton/brave-search-vscode-mcp-extension/issues)
+[![GitHub Issues](https://img.shields.io/github/issues/overtonlabs/brave-search-vscode-mcp-extension)](https://github.com/overtonlabs/brave-search-vscode-mcp-extension/issues)
 
 A VS Code extension that integrates the [Brave Search API](https://brave.com/search/api/) with the Model Context Protocol (MCP), enabling AI Copilot to perform internet searches for research and planning purposes.
 
@@ -56,24 +56,33 @@ See [Brave Search API Pricing](https://api-dashboard.search.brave.com/documentat
 
 ## Configuration
 
+Your API key is stored securely in your operating system's keychain via VS Code's
+Secret Storage — never in plaintext settings, and never synced by Settings Sync.
+
 ### Initial Setup
 
-After installing the extension, you'll be prompted to configure your API key. You can also:
-
-1. Open VS Code Settings (Ctrl+, / Cmd+,)
-2. Search for "Brave Search MCP"
-3. Enter your API key in the `Brave Search Mcp: Api Key` field
-
-### Using Command Palette
+The first time an AI assistant uses Brave Search, you'll be prompted for your API key
+and it will be saved securely. To set it ahead of time, use the Command Palette:
 
 1. Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
 2. Type "Brave Search MCP: Configure API Key"
 3. Enter your API key when prompted
 
+### Managing your key
+
+Both commands live under the **Brave Search MCP** category in the Command Palette:
+
+- **Brave Search MCP: Configure API Key** — set your key, or replace an existing one (key rotation)
+- **Brave Search MCP: Clear API Key** — remove the stored key from secure storage
+
+> **Upgrading from an earlier version?** If you previously stored your key in the
+> `braveSearchMcp.apiKey` setting, it is migrated into secure storage automatically and
+> the plaintext setting is cleared — no action needed.
+
 ### Settings
 
-- `braveSearchMcp.apiKey`: Your Brave Search API key
 - `braveSearchMcp.enabled`: Enable/disable the MCP server (default: true)
+- `braveSearchMcp.apiKey`: _Deprecated_ — retained only to migrate older plaintext keys into secure storage. Use the Configure API Key command instead.
 
 ## Usage
 
@@ -150,9 +159,8 @@ This extension uses the [Model Context Protocol (MCP)](https://modelcontextproto
 
 ### "API key not configured" warning
 
-- Make sure you've entered your API key in the extension settings
+- Run "Brave Search MCP: Configure API Key" from the Command Palette to (re)enter your key
 - Verify the API key is correct and starts with `BSA`
-- Try reconfiguring using the Command Palette command
 
 ### Search tools not appearing in Copilot
 
@@ -174,7 +182,7 @@ This extension uses the [Model Context Protocol (MCP)](https://modelcontextproto
 
 ## Privacy & Security
 
-- Your API key is stored securely in VS Code's settings
+- Your API key is stored securely in your OS keychain via VS Code Secret Storage — not in plaintext settings, and not carried by Settings Sync
 - The API key is never transmitted except to Brave's API servers
 - Search queries are processed by Brave Search (see [Brave Privacy Policy](https://brave.com/privacy/))
 - The extension only activates when the MCP server is requested by an AI assistant
@@ -183,7 +191,7 @@ This extension uses the [Model Context Protocol (MCP)](https://modelcontextproto
 
 ```bash
 # Clone the repository
-git clone https://github.com/Steve0verton/brave-search-vscode-mcp-extension.git
+git clone https://github.com/overtonlabs/brave-search-vscode-mcp-extension.git
 cd brave-search-vscode-mcp-extension
 
 # Install dependencies
@@ -210,7 +218,7 @@ npm run watch
 
 ## Feature Requests & Contributing
 
-Have an idea or found a bug? [Open an issue on GitHub](https://github.com/Steve0verton/brave-search-vscode-mcp-extension/issues) — all feature requests and enhancement ideas are tracked there.
+Have an idea or found a bug? [Open an issue on GitHub](https://github.com/overtonlabs/brave-search-vscode-mcp-extension/issues) — all feature requests and enhancement ideas are tracked there.
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
