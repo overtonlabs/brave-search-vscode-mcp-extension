@@ -15,6 +15,7 @@ tsconfig.json
 .github/**
 QUICKSTART.md
 CLAUDE.md
+TODO.md
 
 # Claude Code / session tooling — internal, never ship to users
 .claude/**
