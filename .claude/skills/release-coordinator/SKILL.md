@@ -54,6 +54,26 @@ three-place version bump, clean commits, and the pause before any outward action
 > - A safe rehearsal exists: the workflow's `workflow_dispatch` dry-run builds + packages
 >   without publishing or releasing.
 
+> **Process notes / runbook** (the agent's *Release runbook & process notes* section has the
+> full detail — pass these along so it doesn't relearn them):
+> - **Working outward order:** push branch → ff-merge to `main` (triggers `ci.yml`) →
+>   `gh workflow run release.yml --ref main` (dry-run, no publish; needs `release.yml` on the
+>   default branch) → on green, `git tag vX.Y.Z && git push origin vX.Y.Z` (the publish
+>   trigger; tag must point at a commit containing `release.yml`) → verify.
+> - **Marketplace propagation lag:** after a green publish step, `vsce show` can keep showing
+>   the old version for minutes. The green CI publish step is the success signal — not the
+>   lagging `vsce show`.
+> - **`VSCE_PAT` lifecycle:** an **Azure DevOps** PAT (Marketplace > Manage), created in the
+>   ADO portal under the `overtonlabs` org on the **same Microsoft account that owns the
+>   `Steve0verton` publisher** — **portal-only, no `az`/CLI path**. It **expires**; rotate via
+>   `gh secret set VSCE_PAT`. Verify without publishing: `npx vsce verify-pat Steve0verton`.
+> - **Node-version CI warning is benign** (checkout/setup-node forced onto Node 24); future
+>   action-version bump, not a blocker.
+> - **Phase 2 (deferred):** move the Marketplace **publisher** `Steve0verton` → `overtonlabs`
+>   (repo already moved). Official deprecation of the old listing is requested via the
+>   microsoft/vscode-discussions "Deprecated Extensions" thread (deprecate *in favor of* the
+>   new id → Migrate button); not self-serve, has Microsoft lead time.
+
 > **⚠️ This is a public Marketplace extension with 700+ live users on auto-update.** A bad
 > publish can't be cleanly un-published — only superseded by another release. Publishing and
 > the GitHub Release are CI-driven (`release.yml`, on the `vX.Y.Z` tag push), so **pushing

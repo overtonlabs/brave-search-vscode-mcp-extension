@@ -88,12 +88,28 @@ Press **F5** in VS Code to launch the Extension Development Host with the extens
   `provider.refresh()` via `context.secrets.onDidChange`.
 - `out/` and `*.vsix` are git-ignored build artifacts; never commit them.
 
-## Releasing (manual)
+## Releasing (CI-driven)
+
+Releases are owned by the `release-coordinator` skill/agent and shipped by GitHub Actions —
+**you do not run `vsce publish` or `gh release create` by hand.** Pushing a `vX.Y.Z` tag is
+the single trigger: `.github/workflows/release.yml` builds the `.vsix` once on the runner,
+`vsce publish`es it to the Marketplace, and creates the GitHub Release with that same `.vsix`
+(notes auto-extracted from the matching `CHANGELOG.md` section). `.github/workflows/ci.yml`
+build-checks every push to `main` and every PR.
 
 1. Update `version` in `package.json` **and** `MCP_SERVER_VERSION` in `src/extension.ts`.
-2. Add a dated section to `CHANGELOG.md`.
-3. `npm run compile && npm run package` to build the `.vsix`.
-4. Commit with a `release: vX.Y.Z` message; publish to the Marketplace via `vsce` when ready.
+2. Add a dated section to `CHANGELOG.md` (+ footer compare link). This section **becomes the
+   GitHub Release notes verbatim**, so it must be accurate and complete.
+3. Commit `release: vX.Y.Z`; ensure `release.yml` is on `main` and in the tagged commit's history.
+4. Optional rehearsal: `gh workflow run release.yml --ref main` (builds + packages, no publish).
+5. `git tag vX.Y.Z && git push origin vX.Y.Z` → CI publishes and cuts the release. Verify with
+   `gh run watch`, `gh release view vX.Y.Z`, and `npx vsce show Steve0verton.brave-search-mcp`.
+
+**Marketplace publishing requires the `VSCE_PAT` repo secret** — an Azure DevOps PAT
+(Marketplace > Manage scope) created in the ADO portal under the `overtonlabs` org on the same
+Microsoft account that owns the `Steve0verton` publisher; **portal-only (no `az`/CLI path)**, and
+it **expires** (rotate via `gh secret set VSCE_PAT`). The Marketplace listing can lag a few
+minutes behind a successful publish — the green CI publish step is the real signal.
 
 ## Related docs
 

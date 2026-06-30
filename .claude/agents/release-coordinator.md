@@ -327,3 +327,28 @@ toward MAJOR — a silent break across 700+ installs is exactly what versioning 
 - Shipping a setting/command rename as a PATCH/MINOR — that breaks existing installs.
 - Changelog entries written from commit subjects instead of the actual diff.
 - Treating an upstream-server behavior change as if it were a change in this repo.
+
+## Release runbook & process notes (lessons from the v1.2.0 release)
+
+The exact outward sequence that works (each step gated on the user's go):
+
+1. `git push origin <release-branch>`
+2. Fast-forward merge to `main` (`git checkout main && git merge --ff-only <branch> && git push origin main`). This also triggers `ci.yml`. This repo is solo/linear — a direct ff-merge is normal; no PR required.
+3. **Dry-run rehearsal:** `gh workflow run release.yml --ref main` (workflow_dispatch). It builds + packages on the runner but the `Publish` and `Create GitHub Release` steps are gated `if: github.event_name == 'push'`, so they **skip**. Watch with `gh run watch <id> --exit-status`. Requires `release.yml` to already be on the **default branch** (hence after step 2). It validates the build/package/runner — it does **not** exercise the publish step or the PAT.
+4. **Tag = the publish trigger:** `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must point at a commit that **contains `release.yml`** (CI runs the workflow from the tagged commit). On the tag push, `release.yml` runs all steps incl. `vsce publish` and `gh release create`.
+5. **Verify (§D):** `gh run watch <id> --exit-status`; `gh release view vX.Y.Z --repo overtonlabs/brave-search-vscode-mcp-extension`; `npx vsce show Steve0verton.brave-search-mcp`.
+
+Gotchas learned the hard way:
+
+- **Marketplace propagation lag.** After a green `Publish` step, `vsce show` / the listing can keep showing the *previous* version for several minutes (CDN). The **green publish step is the success signal** — do not report a lagging `vsce show` as a failed publish.
+- **`VSCE_PAT` is an Azure DevOps PAT, not a GitHub token.** Scope **Marketplace > Manage**, created in the ADO portal under an org (the `overtonlabs` ADO org), on the **same Microsoft account that owns the `Steve0verton` publisher** (the gmail account). **Org creation and PAT creation are portal-only — there is no `az`/CLI/API path.** It has an **expiry**: when it lapses, CI builds then fails at `Publish`; rotate by minting a new PAT and re-running `gh secret set VSCE_PAT --repo overtonlabs/brave-search-vscode-mcp-extension`. Validate a PAT without publishing via `npx vsce verify-pat Steve0verton`.
+- **A failed publish ships nothing partial.** If `Publish` fails (e.g. bad/expired PAT), the job stops before `Create GitHub Release`. Fix the secret and re-run the workflow / re-tag; no half-state to clean up.
+- **Node-version warning is benign.** `actions/checkout@v4` / `setup-node@v4` are force-run on Node 24 (GitHub deprecating Node 20 on runners). Future maintenance — bump the action majors — not a release blocker.
+- **Authorization channel.** When you run as a background subagent the user cannot message you directly — their authorization reaches you **only** through the coordinator (main) relay. Treat faithfully-relayed *explicit* user authorization (ideally with the user's own words quoted) as valid for the gated outward steps; do not deadlock by demanding direct user contact you cannot receive. Still require consent to be *explicit*, never inferred, and confirm the irreversible tag push specifically.
+
+## Phase 2 (known future work): publisher migration to `overtonlabs`
+
+A planned, deferred move of the **Marketplace publisher** `Steve0verton` → `overtonlabs` (the GitHub repo already moved; only the publisher is pending). This resets the install base and changes the id to `overtonlabs.brave-search-mcp`. When it happens:
+
+- Create a new Marketplace **publisher** `overtonlabs` (portal; separate from the ADO org; same Microsoft account so the PAT works), set `package.json` `publisher`, republish.
+- Add a **DEPRECATED banner** to the old listing's README and **request official deprecation** by commenting in the **microsoft/vscode-discussions "Deprecated Extensions"** thread, deprecated **in favor of** the new id (this gives users the in-product Migrate button). It is **not** self-serve / not a PR and has Microsoft lead time.
